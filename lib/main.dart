@@ -146,6 +146,15 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 }
 
+//How to install and run your JSON-Server
 // $ npm install -g json-server
-// $ json-server --watch db.json
-// $ json-server --host 192.168.1.55 db.json
+// $ json-server --host your_pc_address db.json
+
+//db.json default data:
+/*
+{
+  "memo": [],
+  "tag": [],
+  "memo_tag": []
+}
+ */

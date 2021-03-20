@@ -53,6 +53,7 @@ class _Memo extends State<MemoPage> {
   }
 
   Future<void> _saveDataOnDB() async {
+    //Query - Load on db Fetched Data from Server
     await widget.memoDao.insertMemos(await fetchMemo(http.Client()));
     await widget.tagDao.insertTags(await fetchTag(http.Client()));
     await widget.memoTagDao.insertMemoTags(await fetchMemoTag(http.Client()));
@@ -99,9 +100,11 @@ class _Memo extends State<MemoPage> {
                           builder: (context, snapshot) {
                             if (snapshot.hasData) {
                               return Expanded(
+                                //Tags Package
                                 child: Tags(
                                   textField: (widget.memo.userEmail ==
-                                          widget.userEmail)
+                                          widget
+                                              .userEmail) //Google User Permission - Creator of the Memo
                                       ? TagsTextField(
                                           autofocus: false,
                                           onSubmitted: (String text) async {
@@ -124,6 +127,7 @@ class _Memo extends State<MemoPage> {
                                             //Http call "POST" new MemoTag
                                             createMemoTag(
                                                 widget.memo.id, tagTable.id);
+                                            //Method - Save on db the Data just created
                                             await _saveDataOnDB()
                                                 .whenComplete(() {
                                               setState(() {});
@@ -142,21 +146,25 @@ class _Memo extends State<MemoPage> {
                                       removeButton: (widget.memo.userEmail ==
                                                   widget.userEmail &&
                                               snapshot.data[index].tagText !=
-                                                  "#memo")
+                                                  "#memo") //Google User Permission - Creator of the Memo
                                           ? ItemTagsRemoveButton(
                                               onRemoved: () {
                                                 setState(() async {
+                                                  //Query - Fing the Memo_Tag by the memo and tag ID
                                                   MemoTagTable memoTagTable =
                                                       await widget.memoTagDao
                                                           .findMemoTagByMemoIdAndTagid(
                                                               widget.memo.id,
                                                               item.id);
-                                                  await deleteMemoTag(
+                                                  //Http call "DELETE" the Memo_Tag relathion
+                                                  deleteMemoTag(
                                                       memoTagTable.id);
-                                                  widget.memoTagDao
+                                                  //Query - Delete the Memo_Tag relathion
+                                                  await widget.memoTagDao
                                                       .deleteMemoTag(
                                                           memoTagTable)
                                                       .whenComplete(() {
+                                                    //Refresher
                                                     setState(() {});
                                                   });
                                                 });
@@ -236,7 +244,8 @@ class _Memo extends State<MemoPage> {
                                   onNotification:
                                       (OverscrollIndicatorNotification
                                           overscroll) {
-                                    overscroll.disallowGlow();
+                                    overscroll
+                                        .disallowGlow(); //disable ListView Scroll Glow
                                     return;
                                   },
                                   child: Markdown(
@@ -251,7 +260,9 @@ class _Memo extends State<MemoPage> {
                     child: ClipRRect(
                       child: Container(
                           child: (_isEditingBodyText &&
-                                  widget.memo.userEmail == widget.userEmail)
+                                  widget.memo.userEmail ==
+                                      widget
+                                          .userEmail) //Google User Permission - Creator of the Memo
                               ? Padding(
                                   padding: const EdgeInsets.only(
                                       bottom: 10.0, left: 8.0, right: 8.0),
@@ -297,7 +308,8 @@ class _Memo extends State<MemoPage> {
                                     onNotification:
                                         (OverscrollIndicatorNotification
                                             overscroll) {
-                                      overscroll.disallowGlow();
+                                      overscroll
+                                          .disallowGlow(); //Disable ListView Scroll Glow
                                       return;
                                     },
                                     child: Markdown(

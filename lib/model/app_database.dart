@@ -6,7 +6,7 @@ import 'package:note/model/tag.dart';
 
 import 'package:sqflite/sqflite.dart' as sqflite;
 import 'package:path/path.dart';
-part 'app_database.g.dart'; // the generated code will be there
+part 'app_database.g.dart'; // the generated code will be there in case of error run this command : flutter packages pub run build_runner build
 
 @Database(version: 1, entities: [MemoTable, TagTable, MemoTagTable])
 abstract class AppDatabase extends FloorDatabase {
