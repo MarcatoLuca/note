@@ -1,18 +1,31 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 
 import 'package:flutter_markdown/flutter_markdown.dart';
+
 import 'package:flutter_tags/flutter_tags.dart';
 
+import 'package:http/http.dart' as http;
+
 import 'package:note/model/memo.dart';
+import 'package:note/model/memo_tag.dart';
+import 'package:note/model/tag.dart';
 
 class MemoPage extends StatefulWidget {
   const MemoPage({
     Key key,
     @required this.memo,
+    @required this.memoDao,
+    @required this.tagDao,
+    @required this.memoTagDao,
     @required this.userEmail,
   }) : super(key: key);
 
   final MemoTable memo;
+  final MemoTableDao memoDao;
+  final TagTableDao tagDao;
+  final MemoTagDao memoTagDao;
   final String userEmail;
 
   @override
@@ -37,6 +50,12 @@ class _Memo extends State<MemoPage> {
 
     _titleEditingController = TextEditingController();
     _titleEditingController.text = widget.memo.title;
+  }
+
+  Future<void> _saveDataOnDB() async {
+    await widget.memoDao.insertMemos(await fetchMemo(http.Client()));
+    await widget.tagDao.insertTags(await fetchTag(http.Client()));
+    await widget.memoTagDao.insertMemoTags(await fetchMemoTag(http.Client()));
   }
 
   @override
@@ -74,50 +93,85 @@ class _Memo extends State<MemoPage> {
                           ],
                         ),
                       ),
-                      /* Expanded(
-                        child: Tags(
-                          textField: (widget.memo.userEmail == widget.userEmail)
-                              ? TagsTextField(
-                                  autofocus: false,
-                                  onSubmitted: (String tag) {
-                                    setState(() {
-                                      widget.memo.tags.add("#" + tag);
-                                      updateMemo(
-                                          widget.memo,
-                                          _titleEditingController.text,
-                                          _bodyEditingController.text);
-                                    });
-                                  },
-                                )
-                              : null,
-                          itemCount: widget.memo.tags.length,
-                          itemBuilder: (int index) {
-                            final item = widget.memo.tags[index];
-                            return ItemTags(
-                              key: Key(index.toString()),
-                              index: index,
-                              title: item,
-                              combine: ItemTagsCombine.withTextBefore,
-                              removeButton:
-                                  (widget.memo.userEmail == widget.userEmail &&
-                                          widget.memo.tags[index] != "#memo")
-                                      ? ItemTagsRemoveButton(
-                                          onRemoved: () {
-                                            setState(() {
-                                              widget.memo.tags.removeAt(index);
-                                              updateMemo(
-                                                  widget.memo,
-                                                  _titleEditingController.text,
-                                                  _bodyEditingController.text);
+                      FutureBuilder<List<TagTable>>(
+                          future:
+                              widget.tagDao.findAllTagByMemoId(widget.memo.id),
+                          builder: (context, snapshot) {
+                            if (snapshot.hasData) {
+                              return Expanded(
+                                child: Tags(
+                                  textField: (widget.memo.userEmail ==
+                                          widget.userEmail)
+                                      ? TagsTextField(
+                                          autofocus: false,
+                                          onSubmitted: (String text) async {
+                                            String tag = "#" + text;
+
+                                            //Query - Init the Tag Object by its tagText
+                                            TagTable tagTable = await widget
+                                                .tagDao
+                                                .findTagByTagText(tag);
+
+                                            if (tagTable == null) {
+                                              //If Tag Obj doesn't exist
+
+                                              //Http call "POST" new Tag
+                                              var tagResponse =
+                                                  await createTag(tag);
+                                              tagTable = TagTable.fromJson(
+                                                  jsonDecode(tagResponse.body));
+                                            }
+                                            //Http call "POST" new MemoTag
+                                            createMemoTag(
+                                                widget.memo.id, tagTable.id);
+                                            await _saveDataOnDB()
+                                                .whenComplete(() {
+                                              setState(() {});
                                             });
-                                            return true;
                                           },
                                         )
                                       : null,
-                            );
-                          },
-                        ),
-                      ) */
+                                  itemCount: snapshot.data.length,
+                                  itemBuilder: (int index) {
+                                    final item = snapshot.data[index];
+                                    return ItemTags(
+                                      key: Key(index.toString()),
+                                      index: index,
+                                      title: item.tagText,
+                                      combine: ItemTagsCombine.withTextBefore,
+                                      removeButton: (widget.memo.userEmail ==
+                                                  widget.userEmail &&
+                                              snapshot.data[index].tagText !=
+                                                  "#memo")
+                                          ? ItemTagsRemoveButton(
+                                              onRemoved: () {
+                                                setState(() async {
+                                                  MemoTagTable memoTagTable =
+                                                      await widget.memoTagDao
+                                                          .findMemoTagByMemoIdAndTagid(
+                                                              widget.memo.id,
+                                                              item.id);
+                                                  await deleteMemoTag(
+                                                      memoTagTable.id);
+                                                  widget.memoTagDao
+                                                      .deleteMemoTag(
+                                                          memoTagTable)
+                                                      .whenComplete(() {
+                                                    setState(() {});
+                                                  });
+                                                });
+                                                return true;
+                                              },
+                                            )
+                                          : null,
+                                    );
+                                  },
+                                ),
+                              );
+                            } else {
+                              return Container();
+                            }
+                          })
                     ],
                   ))),
             ),
@@ -147,15 +201,23 @@ class _Memo extends State<MemoPage> {
                                       labelText: 'Title:',
                                       border: InputBorder.none,
                                       suffixIcon: IconButton(
-                                        onPressed: () {
+                                        onPressed: () async {
                                           setState(() {
                                             _isEditingTitleText = false;
                                           });
-                                          updateMemo(
-                                              widget.memo,
+                                          //Set new Memo Title Value
+                                          widget.memo.title =
                                               _titleEditingController.text
-                                                  .toUpperCase(),
-                                              _bodyEditingController.text);
+                                                  .toUpperCase();
+
+                                          //Query - Update Memo
+                                          await widget.memoDao
+                                              .updateMemo(widget.memo)
+                                              .whenComplete(() {
+                                            setState(() {});
+                                          });
+                                          //Http call "UPDATE"
+                                          updateMemo(widget.memo);
                                         },
                                         icon: Icon(Icons.done),
                                       )),
@@ -178,9 +240,9 @@ class _Memo extends State<MemoPage> {
                                     return;
                                   },
                                   child: Markdown(
-                                    data: _titleEditingController.text
-                                            .toUpperCase() ??
-                                        '',
+                                    data: (widget.memo.title != null)
+                                        ? widget.memo.title.toUpperCase()
+                                        : '',
                                     selectable: false,
                                   ),
                                 ))),
@@ -200,15 +262,23 @@ class _Memo extends State<MemoPage> {
                                         labelText: 'Write here your note:',
                                         border: InputBorder.none,
                                         suffixIcon: IconButton(
-                                          onPressed: () {
+                                          onPressed: () async {
                                             setState(() {
                                               _isEditingBodyText = false;
                                             });
-                                            updateMemo(
-                                                widget.memo,
-                                                _titleEditingController.text
-                                                    .toUpperCase(),
-                                                _bodyEditingController.text);
+
+                                            //Set new Memo Text Value
+                                            widget.memo.text =
+                                                _bodyEditingController.text;
+
+                                            //Query - Update Memo
+                                            await widget.memoDao
+                                                .updateMemo(widget.memo)
+                                                .whenComplete(() {
+                                              setState(() {});
+                                            });
+                                            //Http call "UPDATE"
+                                            updateMemo(widget.memo);
                                           },
                                           icon: Icon(Icons.done),
                                         )),
@@ -231,7 +301,9 @@ class _Memo extends State<MemoPage> {
                                       return;
                                     },
                                     child: Markdown(
-                                      data: _bodyEditingController.text ?? '',
+                                      data: (widget.memo.text != null)
+                                          ? widget.memo.text
+                                          : '',
                                       selectable: false,
                                     ),
                                   ))),

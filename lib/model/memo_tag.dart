@@ -41,9 +41,9 @@ Future<http.Response> createMemoTag(int memoId, int tagId) {
 
 /// HTTP DELETE REQUEST
 /// Delete a memo by its id
-Future<http.Response> deleteMemoTag(int memoId) {
+Future<http.Response> deleteMemoTag(int id) {
   return http.delete(
-    'http://192.168.1.55:3000/memo_tag?memoId=$memoId',
+    'http://192.168.1.55:3000/memo_tag/$id',
     headers: <String, String>{
       'Content-Type': 'application/json; charset=UTF-8',
     },
@@ -84,8 +84,16 @@ abstract class MemoTagDao {
   @Query('SELECT * FROM Memo_Tag')
   Future<List<MemoTagTable>> findAllMemoTag();
 
-  @Query('DELETE FROM Memo_Tag WHERE Memo_Tag.memoId = :id')
-  Future<void> deleteMemoTagByMemoId(int id);
+  @Query('SELECT * FROM Memo_Tag WHERE Memo_Tag.memoId = :id')
+  Future<List<MemoTagTable>> findAllMemoTagByMemoId(int id);
+
+  @Query(
+      'SELECT * FROM Memo_Tag WHERE Memo_Tag.memoId = :memoId AND Memo_Tag.tagId = :tagId')
+  Future<MemoTagTable> findMemoTagByMemoIdAndTagid(int memoId, int tagId);
+
+  @Query(
+      'SELECT id FROM Memo_Tag WHERE Memo_Tag.id = (SELECT Max(id) FROM Memo_Tag)')
+  Future<MemoTagTable> findLastMemoTagId();
 
   @Insert(onConflict: OnConflictStrategy.replace)
   Future<void> insertMemoTag(MemoTagTable memoTag);

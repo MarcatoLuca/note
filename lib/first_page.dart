@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 
@@ -43,9 +44,6 @@ class _FirstPage extends State<FirstPage> with SingleTickerProviderStateMixin {
   TagTableDao _tagDao;
   MemoTagDao _memoTagDao;
 
-  //App Bar Account Animation Value
-  bool _appBarController = false;
-
   //Body App Bar Animation Controller and Value
   bool _bodySwitcher = true;
   AnimationController _bodySwitcherController;
@@ -87,34 +85,30 @@ class _FirstPage extends State<FirstPage> with SingleTickerProviderStateMixin {
     );
   }
 
-  void _saveDataOnDB() async {
+  Future<void> _saveDataOnDB() async {
     await _memoDao.insertMemos(await fetchMemo(http.Client()));
     await _tagDao.insertTags(await fetchTag(http.Client()));
     await _memoTagDao.insertMemoTags(await fetchMemoTag(http.Client()));
   }
 
-  Future<void> _associateMemoTag(String text) async {
-    String tag = "#" + text; //Add to the text the # key
+  Future<void> _associateMemoTag(String tag, MemoTable memoTable) async {
+    List<String> tags = ["#memo"];
+    if (tag != "#memo") tags.add(tag);
 
-    //Query - Init the Tag Object by its tagText
-    TagTable tagTable = await _tagDao.findTagByTagText(tag);
-    if (tagTable == null) {
-      //If Tag Obj doesn't exist
+    for (String tag in tags) {
+      //Query - Init the Tag Object by its tagText
+      TagTable tagTable = await _tagDao.findTagByTagText(tag);
+      if (tagTable == null) {
+        //If Tag Obj doesn't exist
 
-      //Query - Create a new Tag
-      await _tagDao.insertTag(new TagTable(tagText: tag));
-      //Http call "POST" new Tag
-      createTag(tag);
-      //Query - Init Tag Obj
-      tagTable = await _tagDao.findTagByTagText(tag);
+        //Http call "POST" new Tag
+        var tagResponse = await createTag(tag);
+        tagTable = TagTable.fromJson(jsonDecode(tagResponse.body));
+      }
+      //Http call "POST" new MemoTag
+      createMemoTag(memoTable.id, tagTable.id);
     }
-    //Query - Last Memo inserted
-    MemoTable memoTable = await _memoDao.findLastMemoId();
-    //Query - Create a new MemoTag (many-to-many) relationship beetwen Memo and Tag
-    _memoTagDao.insertMemoTag(
-        new MemoTagTable(memoId: memoTable.id, tagId: tagTable.id));
-    //Http call "POST" new MemoTag
-    createMemoTag(memoTable.id, tagTable.id);
+    await _saveDataOnDB();
   }
 
   Future<void> _handleSignOut() => widget.googleSignIn.disconnect();
@@ -127,7 +121,7 @@ class _FirstPage extends State<FirstPage> with SingleTickerProviderStateMixin {
     cardKey.currentState.toggleCard();
   }
 
-  void _searchContainerController(String tag, bool search) {
+  Future<void> _searchContainerController(String text, bool search) async {
     setState(() {
       if (_searchContainerHeight == 0) {
         _searchContainerHeight = 60;
@@ -135,7 +129,13 @@ class _FirstPage extends State<FirstPage> with SingleTickerProviderStateMixin {
       } else {
         _searchContainerHeight = 0;
         _isVisible = false;
-        if (search) _searchTag = "#" + tag;
+        if (search) {
+          if (text == "") {
+            _searchTag = "#memo";
+          } else {
+            _searchTag = "#" + text;
+          }
+        }
       }
     });
   }
@@ -143,7 +143,7 @@ class _FirstPage extends State<FirstPage> with SingleTickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     _showPopupMenu(
-        int id, String userEmail, GlobalKey<FlipCardState> cardKey) async {
+        int memoId, String userEmail, GlobalKey<FlipCardState> cardKey) async {
       final RenderBox overlay = Overlay.of(context).context.findRenderObject();
       Vibration.vibrate(duration: 40, amplitude: 10); //Vibration Service
       await showMenu(
@@ -162,22 +162,26 @@ class _FirstPage extends State<FirstPage> with SingleTickerProviderStateMixin {
           ),
           PopupMenuItem(
             child: InkWell(
-                onTap: () {
+                onTap: () async {
                   //Google User Permission
                   if (widget.user.email == userEmail) {
-                    setState(() async {
-                      await _memoTagDao.deleteMemoTagByMemoId(id);
+                    //Query - Delete MemoTag related to the Deleted Memo
+                    List<MemoTagTable> memoTags =
+                        await _memoTagDao.findAllMemoTagByMemoId(memoId);
+                    for (MemoTagTable item in memoTags) {
+                      await _memoTagDao.deleteMemoTag(item);
                       //Http call "DELETE" by memoId
-                      deleteMemoTag(id);
-                      //Query - Delete Memo by its Id
-                      await _memoDao.deleteMemoById(id).whenComplete(() {
-                        setState(() {});
-                      });
-                      //Http call "DELETE" using Memo - id
-                      deleteMemo(id);
-                      //Query - Delete MemoTag related to the Deleted Memo
-                      Navigator.pop(context); //Close Popup Call
+                      await deleteMemoTag(item.id);
+                    }
+                    //Query - Delete Memo by its Id
+                    await _memoDao.deleteMemoById(memoId).whenComplete(() {
+                      //Refresh Page on Future Complete
+                      setState(() {});
                     });
+
+                    //Http call "DELETE" using Memo - id
+                    deleteMemo(memoId);
+                    Navigator.pop(context); //Close Popup Call
                   }
                 },
                 child: Text("Delete")),
@@ -196,16 +200,9 @@ class _FirstPage extends State<FirstPage> with SingleTickerProviderStateMixin {
               child: AppBarAccount(
                 //Google User Credential
                 user: widget.user,
-                //Animation App Bar Controller
-                value: _appBarController,
                 //Google User Logout Function
                 handleSignOut: _handleSignOut,
-                onPressed: () {
-                  //App Bar Value Switcher function
-                  setState(() {
-                    _appBarController = !_appBarController;
-                  });
-                },
+                onPressed: () {},
               )),
           Flexible(
               flex: 10,
@@ -220,35 +217,40 @@ class _FirstPage extends State<FirstPage> with SingleTickerProviderStateMixin {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             BodyAppBar(
-                                //Body Animation Controller
-                                bodySwitcherController: _bodySwitcherController,
-                                onSwitcherPress: () {
-                                  //Body Animation function
-                                  setState(() {
-                                    _bodySwitcher
-                                        ? _bodySwitcherController.forward()
-                                        : _bodySwitcherController.reverse();
-                                    _bodySwitcher = !_bodySwitcher;
-                                  });
-                                },
-                                onSearchPress: () =>
-                                    _searchContainerController("", false),
-                                onAddPress: () {
-                                  //New Memo function
+                              //Body Animation Controller
+                              bodySwitcherController: _bodySwitcherController,
+                              onSwitcherPress: () {
+                                //Body Animation function
+                                setState(() {
+                                  _bodySwitcher
+                                      ? _bodySwitcherController.forward()
+                                      : _bodySwitcherController.reverse();
+                                  _bodySwitcher = !_bodySwitcher;
+                                });
+                              },
+                              onSearchPress: () =>
+                                  _searchContainerController("", false),
+                              onAddPress: () async {
+                                //New Memo function
 
-                                  //Query - Create a new Memo
-                                  _memoDao.insertMemo(new MemoTable(
-                                      userEmail: widget.user.email,
-                                      userDisplayName:
-                                          widget.user.displayName));
-                                  //Http call "POST". Create a new Memo with Google User Credential
-                                  createMemo(widget.user);
-                                  //Create a new Instance of MemoTag (many-to-many) Table
-                                  _associateMemoTag("memo").whenComplete(() {
-                                    //Refresh Page on Future Complete
-                                    setState(() {});
-                                  });
-                                }),
+                                //Http call "POST". Create a new Memo with Google User Credential
+                                var memoResponse = await createMemo(
+                                    new MemoTable(
+                                        userEmail: widget.user.email,
+                                        userDisplayName:
+                                            widget.user.displayName));
+
+                                //Create a new Instance of MemoTag (many-to-many) Table
+                                _associateMemoTag(
+                                        _searchTag,
+                                        MemoTable.fromJson(
+                                            jsonDecode(memoResponse.body)))
+                                    .whenComplete(() {
+                                  setState(() {});
+                                });
+                              },
+                              tag: _searchTag,
+                            ),
                             Divider(),
                             Padding(
                               padding:
@@ -290,6 +292,9 @@ class _FirstPage extends State<FirstPage> with SingleTickerProviderStateMixin {
                                       MaterialPageRoute(
                                           builder: (context) => MemoPage(
                                                 memo: memo,
+                                                memoDao: _memoDao,
+                                                tagDao: _tagDao,
+                                                memoTagDao: _memoTagDao,
                                                 userEmail: user,
                                               )));
                                 },

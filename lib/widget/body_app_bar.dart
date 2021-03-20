@@ -6,12 +6,14 @@ class BodyAppBar extends StatelessWidget {
       @required this.onSwitcherPress,
       @required this.onAddPress,
       @required this.onSearchPress,
+      @required this.tag,
       @required this.bodySwitcherController})
       : super(key: key);
 
   final Function onSwitcherPress;
   final Function onAddPress;
   final Function onSearchPress;
+  final String tag;
   final AnimationController bodySwitcherController;
 
   @override
@@ -34,7 +36,14 @@ class BodyAppBar extends StatelessWidget {
           shape: CircleBorder(),
         ),
         Expanded(
-          child: Container(),
+          child: Center(
+            child: Container(
+              child: Text(
+                tag,
+                style: TextStyle(fontSize: 20, color: Colors.white),
+              ),
+            ),
+          ),
         ),
         Padding(
           padding: const EdgeInsets.all(3.0),

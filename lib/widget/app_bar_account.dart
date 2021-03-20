@@ -5,13 +5,11 @@ import 'package:google_sign_in/google_sign_in.dart';
 class AppBarAccount extends StatelessWidget {
   const AppBarAccount(
       {Key key,
-      @required this.value,
       @required this.onPressed,
       @required this.handleSignOut,
       @required this.user})
       : super(key: key);
 
-  final bool value;
   final Function onPressed;
   final Function handleSignOut;
   final GoogleSignInAccount user;
@@ -22,15 +20,14 @@ class AppBarAccount extends StatelessWidget {
       children: [
         Align(
             alignment: Alignment.centerLeft,
-            child: AnimatedContainer(
+            child: Container(
                 margin: const EdgeInsets.only(left: 42.0),
                 decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.only(
                         topRight: Radius.circular(50),
                         bottomRight: Radius.circular(50))),
-                duration: Duration(milliseconds: 650),
-                width: value ? MediaQuery.of(context).size.width : 0,
+                width: MediaQuery.of(context).size.width,
                 height: 50,
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -56,19 +53,25 @@ class AppBarAccount extends StatelessWidget {
                         ),
                       ),
                     ),
-                    IconButton(
-                        icon: Icon(Icons.logout),
-                        onPressed: () => handleSignOut()),
-                    VerticalDivider(
-                      indent: 8,
-                      endIndent: 8,
-                    ),
-                    Container(
-                      margin: const EdgeInsets.only(right: 8.0),
-                      child: IconButton(
-                          icon: Icon(Icons.clear),
-                          onPressed: () => onPressed()),
-                    )
+                    Visibility(
+                        visible: true,
+                        child: Row(
+                          children: [
+                            IconButton(
+                                icon: Icon(Icons.logout),
+                                onPressed: () => handleSignOut()),
+                            VerticalDivider(
+                              indent: 8,
+                              endIndent: 8,
+                            ),
+                            Container(
+                              margin: const EdgeInsets.only(right: 8.0),
+                              child: IconButton(
+                                  icon: Icon(Icons.clear),
+                                  onPressed: () => onPressed()),
+                            )
+                          ],
+                        ))
                   ],
                 ))),
         Align(

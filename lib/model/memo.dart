@@ -26,15 +26,15 @@ List<MemoTable> parseMemo(String responseBody) {
 /// Body Request: (Memo)
 /// userEmail - Google user email
 /// userDisplayName - Google user name credentials (Name Surname)
-Future<http.Response> createMemo(GoogleSignInAccount user) {
+Future<http.Response> createMemo(MemoTable memo) {
   return http.post(
     'http://192.168.1.55:3000/memo',
     headers: <String, String>{
       'Content-Type': 'application/json; charset=UTF-8',
     },
     body: jsonEncode(<String, dynamic>{
-      'userEmail': user.email,
-      'userDisplayName': user.displayName,
+      'userEmail': memo.userEmail,
+      'userDisplayName': memo.userDisplayName,
     }),
   );
 }
@@ -56,7 +56,7 @@ Future<http.Response> deleteMemo(int id) {
 /// userDisplayName - Google user name credentials (Name Surname)
 /// title - Title of the memo
 /// text - Body text of the memo
-Future<http.Response> updateMemo(MemoTable memo, String title, String text) {
+Future<http.Response> updateMemo(MemoTable memo) {
   int id = memo.id;
   return http.put(
     'http://192.168.1.55:3000/memo/$id',
@@ -66,8 +66,8 @@ Future<http.Response> updateMemo(MemoTable memo, String title, String text) {
     body: jsonEncode(<String, dynamic>{
       'userEmail': memo.userEmail,
       'userDisplayName': memo.userDisplayName,
-      'title': title,
-      'text': text
+      'title': memo.title,
+      'text': memo.text
     }),
   );
 }
@@ -115,7 +115,7 @@ abstract class MemoTableDao {
   Future<List<MemoTable>> findAllMemo();
 
   @Query(
-      'SELECT id, userEmail, userDisplayName, title, text FROM Memo AS MemoTable LEFT JOIN (SELECT Memo_Tag.memoId FROM Memo_Tag INNER JOIN Tag WHERE Tag.tagText = :tag GROUP BY Memo_Tag.memoId) AS TagTable ON TagTable.memoId = MemoTable.id')
+      'SELECT id, userEmail, userDisplayName, title, text FROM Memo AS MemoTable INNER JOIN (SELECT memoId FROM Memo_Tag WHERE Memo_Tag.tagId = (SELECT id FROM Tag WHERE Tag.tagText = :tag)) AS TagTable WHERE MemoTable.id = TagTable.memoId')
   Future<List<MemoTable>> findAllMemoByTag(String tag);
 
   @Query('SELECT id FROM Memo WHERE Memo.id = (SELECT Max(id) FROM Memo)')
@@ -136,3 +136,5 @@ abstract class MemoTableDao {
   @update
   Future<void> updateMemo(MemoTable memo);
 }
+
+//

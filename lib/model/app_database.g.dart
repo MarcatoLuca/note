@@ -174,7 +174,7 @@ class _$MemoTableDao extends MemoTableDao {
   @override
   Future<List<MemoTable>> findAllMemoByTag(String tag) async {
     return _queryAdapter.queryList(
-        'SELECT id, userEmail, userDisplayName, title, text FROM Memo AS MemoTable LEFT JOIN (SELECT Memo_Tag.memoId FROM Memo_Tag INNER JOIN Tag WHERE Tag.tagText = ? GROUP BY Memo_Tag.memoId) AS TagTable ON TagTable.memoId = MemoTable.id',
+        'SELECT id, userEmail, userDisplayName, title, text FROM Memo AS MemoTable INNER JOIN (SELECT memoId FROM Memo_Tag WHERE Memo_Tag.tagId = (SELECT id FROM Tag WHERE Tag.tagText = ?)) AS TagTable WHERE MemoTable.id = TagTable.memoId',
         arguments: <dynamic>[tag],
         mapper: (Map<String, dynamic> row) => MemoTable(
             id: row['id'] as int,
@@ -282,6 +282,14 @@ class _$TagTableDao extends TagTableDao {
   }
 
   @override
+  Future<TagTable> findLastTagId() async {
+    return _queryAdapter.query(
+        'SELECT id FROM Tag WHERE Tag.id = (SELECT Max(id) FROM Tag)',
+        mapper: (Map<String, dynamic> row) =>
+            TagTable(id: row['id'] as int, tagText: row['tagText'] as String));
+  }
+
+  @override
   Future<void> insertTag(TagTable tag) async {
     await _tagTableInsertionAdapter.insert(tag, OnConflictStrategy.replace);
   }
@@ -355,10 +363,36 @@ class _$MemoTagDao extends MemoTagDao {
   }
 
   @override
-  Future<void> deleteMemoTagByMemoId(int id) async {
-    await _queryAdapter.queryNoReturn(
-        'DELETE FROM Memo_Tag WHERE Memo_Tag.memoId = ?',
-        arguments: <dynamic>[id]);
+  Future<List<MemoTagTable>> findAllMemoTagByMemoId(int id) async {
+    return _queryAdapter.queryList(
+        'SELECT * FROM Memo_Tag WHERE Memo_Tag.memoId = ?',
+        arguments: <dynamic>[id],
+        mapper: (Map<String, dynamic> row) => MemoTagTable(
+            id: row['id'] as int,
+            memoId: row['memoId'] as int,
+            tagId: row['tagId'] as int));
+  }
+
+  @override
+  Future<MemoTagTable> findMemoTagByMemoIdAndTagid(
+      int memoId, int tagId) async {
+    return _queryAdapter.query(
+        'SELECT * FROM Memo_Tag WHERE Memo_Tag.memoId = ? AND Memo_Tag.tagId = ?',
+        arguments: <dynamic>[memoId, tagId],
+        mapper: (Map<String, dynamic> row) => MemoTagTable(
+            id: row['id'] as int,
+            memoId: row['memoId'] as int,
+            tagId: row['tagId'] as int));
+  }
+
+  @override
+  Future<MemoTagTable> findLastMemoTagId() async {
+    return _queryAdapter.query(
+        'SELECT id FROM Memo_Tag WHERE Memo_Tag.id = (SELECT Max(id) FROM Memo_Tag)',
+        mapper: (Map<String, dynamic> row) => MemoTagTable(
+            id: row['id'] as int,
+            memoId: row['memoId'] as int,
+            tagId: row['tagId'] as int));
   }
 
   @override

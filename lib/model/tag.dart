@@ -65,6 +65,9 @@ abstract class TagTableDao {
   @Query('SELECT * FROM Tag WHERE Tag.tagText = :tag')
   Future<TagTable> findTagByTagText(String tag);
 
+  @Query('SELECT id FROM Tag WHERE Tag.id = (SELECT Max(id) FROM Tag)')
+  Future<TagTable> findLastTagId();
+
   @Insert(onConflict: OnConflictStrategy.replace)
   Future<void> insertTag(TagTable tag);
 
