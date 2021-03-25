@@ -15,7 +15,6 @@ class BodySwitchMemo extends StatelessWidget {
     @required this.memo,
     @required this.user,
     @required this.tagDao,
-    @required this.bodySwitcher,
     @required this.onTap,
     @required this.onTapDown,
     @required this.onLongPress,
@@ -26,7 +25,6 @@ class BodySwitchMemo extends StatelessWidget {
   final List<MemoTable> memo;
   final String user;
   final TagTableDao tagDao;
-  final bool bodySwitcher;
   final Function onTap;
   final Function onTapDown;
   final Function onLongPress;
@@ -38,8 +36,8 @@ class BodySwitchMemo extends StatelessWidget {
     return Container(
       child: GridView.count(
         physics: BouncingScrollPhysics(),
-        childAspectRatio: (bodySwitcher) ? 0.7 : 1.7,
-        crossAxisCount: (bodySwitcher) ? 2 : 1,
+        childAspectRatio: 0.7,
+        crossAxisCount: 2,
         children: List.generate(
           memo.length,
           (int index) {

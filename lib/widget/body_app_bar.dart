@@ -1,40 +1,21 @@
 import 'package:flutter/material.dart';
 
 class BodyAppBar extends StatelessWidget {
-  const BodyAppBar(
-      {Key key,
-      @required this.onSwitcherPress,
-      @required this.onAddPress,
-      @required this.onSearchPress,
-      @required this.tag,
-      @required this.bodySwitcherController})
-      : super(key: key);
+  const BodyAppBar({
+    Key key,
+    @required this.onAddPress,
+    @required this.onSearchPress,
+    @required this.tag,
+  }) : super(key: key);
 
-  final Function onSwitcherPress;
   final Function onAddPress;
   final Function onSearchPress;
   final String tag;
-  final AnimationController bodySwitcherController;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        RawMaterialButton(
-          onPressed: () => onSwitcherPress(),
-          elevation: 0,
-          highlightElevation: 0,
-          fillColor: Colors.black.withOpacity(0.1),
-          highlightColor: Colors.transparent,
-          hoverColor: Colors.transparent,
-          focusColor: Colors.transparent,
-          child: AnimatedIcon(
-            size: 20,
-            icon: AnimatedIcons.view_list,
-            progress: bodySwitcherController,
-          ),
-          shape: CircleBorder(),
-        ),
         Expanded(
           child: Center(
             child: Container(

@@ -44,10 +44,6 @@ class _FirstPage extends State<FirstPage> with SingleTickerProviderStateMixin {
   TagTableDao _tagDao;
   MemoTagDao _memoTagDao;
 
-  //Body App Bar Animation Controller and Value
-  bool _bodySwitcher = true;
-  AnimationController _bodySwitcherController;
-
   //PopupMenu Memo Values
   Offset _tapPosition;
   Map<int, GlobalKey<FlipCardState>> _cardKeys =
@@ -77,12 +73,6 @@ class _FirstPage extends State<FirstPage> with SingleTickerProviderStateMixin {
               setState(() {});
             }));
     */
-
-    _bodySwitcherController = AnimationController(
-      vsync: this,
-      duration: Duration(milliseconds: 500),
-      reverseDuration: Duration(milliseconds: 500),
-    );
   }
 
   Future<void> _saveDataOnDB() async {
@@ -218,16 +208,7 @@ class _FirstPage extends State<FirstPage> with SingleTickerProviderStateMixin {
                           children: [
                             BodyAppBar(
                               //Body Animation Controller
-                              bodySwitcherController: _bodySwitcherController,
-                              onSwitcherPress: () {
-                                //Body Animation function
-                                setState(() {
-                                  _bodySwitcher
-                                      ? _bodySwitcherController.forward()
-                                      : _bodySwitcherController.reverse();
-                                  _bodySwitcher = !_bodySwitcher;
-                                });
-                              },
+
                               onSearchPress: () =>
                                   _searchContainerController("", false),
                               onAddPress: () async {
@@ -284,7 +265,6 @@ class _FirstPage extends State<FirstPage> with SingleTickerProviderStateMixin {
                                 //User Email to authenticate memo creator
                                 user: widget.user.email,
                                 tagDao: _tagDao,
-                                bodySwitcher: _bodySwitcher,
                                 onTap: (memo, user) {
                                   //Page Navigator -> Memo_Page
                                   Navigator.push(
