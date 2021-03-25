@@ -53,25 +53,9 @@ class AppBarAccount extends StatelessWidget {
                         ),
                       ),
                     ),
-                    Visibility(
-                        visible: true,
-                        child: Row(
-                          children: [
-                            IconButton(
-                                icon: Icon(Icons.logout),
-                                onPressed: () => handleSignOut()),
-                            VerticalDivider(
-                              indent: 8,
-                              endIndent: 8,
-                            ),
-                            Container(
-                              margin: const EdgeInsets.only(right: 8.0),
-                              child: IconButton(
-                                  icon: Icon(Icons.clear),
-                                  onPressed: () => onPressed()),
-                            )
-                          ],
-                        ))
+                    IconButton(
+                        icon: Icon(Icons.logout),
+                        onPressed: () => handleSignOut()),
                   ],
                 ))),
         Align(
